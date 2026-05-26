@@ -926,7 +926,8 @@
     }
 
     .mob-overlay.open {
-      opacity: 1
+      opacity: 1;
+      pointer-events: auto
     }
 
     @media(max-width:768px) {
@@ -2627,11 +2628,58 @@
     body.dark #themeBtnSun        { display: block }
 
     /* ═══════════════════════════════════════════════════════════
+       SNAPCHAT-STYLE DARK MODE GLOW
+    ═══════════════════════════════════════════════════════════ */
+    body.dark .brand-logo {
+      box-shadow: 0 0 18px rgba(200,149,42,.55), 0 0 40px rgba(200,149,42,.25), 0 3px 14px rgba(200,149,42,.4);
+    }
+    body.dark .sidebar {
+      box-shadow: 4px 0 32px rgba(0,0,0,.6), inset -1px 0 0 rgba(200,149,42,.08);
+    }
+    body.dark .mob-toggle {
+      box-shadow: 0 0 14px rgba(200,149,42,.35), 0 4px 16px rgba(0,0,0,.5);
+      border-color: rgba(200,149,42,.3) !important;
+    }
+    body.dark .map-btn {
+      box-shadow: 0 0 12px rgba(200,149,42,.2), 0 2px 10px rgba(0,0,0,.5);
+    }
+    body.dark .map-btn:hover {
+      box-shadow: 0 0 18px rgba(200,149,42,.4), 0 2px 10px rgba(0,0,0,.5);
+      border-color: rgba(200,149,42,.4) !important;
+    }
+    body.dark .info-panel {
+      box-shadow: 0 0 40px rgba(0,0,0,.7), 0 0 20px rgba(200,149,42,.12);
+    }
+    body.dark .c-card.on {
+      box-shadow: 0 0 16px rgba(200,149,42,.25), inset 0 0 0 1px rgba(200,149,42,.3);
+    }
+    body.dark .b-item.on {
+      box-shadow: 0 0 14px rgba(200,149,42,.22), inset 0 0 0 1px rgba(200,149,42,.28);
+    }
+    body.dark .chip.on, body.dark .chip:hover {
+      box-shadow: 0 0 12px rgba(200,149,42,.3);
+    }
+    body.dark .view-pill {
+      box-shadow: 0 0 18px rgba(0,0,0,.6), 0 0 12px rgba(200,149,42,.15);
+    }
+    body.dark .dir-panel {
+      box-shadow: 0 0 36px rgba(0,0,0,.65), 0 0 16px rgba(200,149,42,.1);
+    }
+    body.dark .ico-btn#themeBtn {
+      box-shadow: 0 0 10px rgba(200,149,42,.35);
+      border-color: rgba(200,149,42,.35) !important;
+    }
+    /* Map dark overlay for tiles — applied via JS tile swap */
+    body.dark #map .leaflet-tile-pane {
+      filter: brightness(0.85) contrast(1.1) saturate(0.8);
+    }
+
+    /* ═══════════════════════════════════════════════════════════
        MOBILE OVERLAY
     ═══════════════════════════════════════════════════════════ */
     .mob-overlay{display:none;position:fixed;inset:0;z-index:299;background:rgba(28,24,16,.45);
       backdrop-filter:blur(2px);opacity:0;pointer-events:none;transition:opacity var(--slow) var(--ease)}
-    .mob-overlay.open{opacity:1}
+    .mob-overlay.open{opacity:1;pointer-events:auto}
     @media(max-width:768px){.mob-overlay{display:block}}
 
     /* ═══════════════════════════════════════════════════════════
@@ -3246,8 +3294,23 @@
         center: [5.695, -0.173], zoom: 14, minZoom: 6, maxZoom: 20,
         zoomControl: false, zoomSnap: 0.25, zoomDelta: 0.5
       });
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-        { attribution: '&copy; CARTO &copy; OpenStreetMap', subdomains: 'abcd', maxZoom: 20 }).addTo(map);
+
+      const TILE_LIGHT = 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
+      const TILE_DARK  = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+      const TILE_ATTR  = '&copy; CARTO &copy; OpenStreetMap';
+
+      const isDarkOnLoad = document.body.classList.contains('dark');
+      window._tileLayer = L.tileLayer(isDarkOnLoad ? TILE_DARK : TILE_LIGHT,
+        { attribution: TILE_ATTR, subdomains: 'abcd', maxZoom: 20 }).addTo(map);
+
+      window._swapMapTiles = function(dark) {
+        if (window._tileLayer) map.removeLayer(window._tileLayer);
+        window._tileLayer = L.tileLayer(dark ? TILE_DARK : TILE_LIGHT,
+          { attribution: TILE_ATTR, subdomains: 'abcd', maxZoom: 20 });
+        window._tileLayer.addTo(map);
+        window._tileLayer.bringToBack();
+      };
+
       mkGroup = L.layerGroup().addTo(map);
       bldGroup = L.layerGroup().addTo(map);
       rtGroup = L.layerGroup();
@@ -3673,6 +3736,7 @@
       document.getElementById('themeBtn').addEventListener('click', () => {
         const isDark = document.body.classList.toggle('dark');
         localStorage.setItem('dti-theme', isDark ? 'dark' : 'light');
+        if (typeof window._swapMapTiles === 'function') window._swapMapTiles(isDark);
       });
       document.getElementById('routeBtn').addEventListener('click', () => {
         routesOn = !routesOn;
